@@ -412,9 +412,9 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "himalaya" },
-    { name = "laion-fmri", extra = ["template"] },
     { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "matplotlib", version = "3.11.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "nilearn" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -425,6 +425,11 @@ dependencies = [
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "torch" },
     { name = "torchvision" },
+]
+
+[package.optional-dependencies]
+laion = [
+    { name = "laion-fmri", extra = ["template"] },
 ]
 
 [package.dev-dependencies]
@@ -438,14 +443,16 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "himalaya", specifier = ">=0.4.11" },
-    { name = "laion-fmri", extras = ["template"], git = "https://github.com/ViCCo-Group/LAION-fMRI.git?rev=main" },
+    { name = "laion-fmri", extras = ["template"], marker = "extra == 'laion'", git = "https://github.com/ViCCo-Group/LAION-fMRI.git?rev=main" },
     { name = "matplotlib", specifier = ">=3.7" },
+    { name = "nilearn", specifier = ">=0.11" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pillow", specifier = ">=10" },
     { name = "scipy", specifier = ">=1.11" },
     { name = "torch", specifier = ">=2.2" },
     { name = "torchvision", specifier = ">=0.17" },
 ]
+provides-extras = ["laion"]
 
 [package.metadata.requires-dev]
 dev = [

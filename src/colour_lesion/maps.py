@@ -1,49 +1,17 @@
-"""Cortical flatmaps on fsaverage5: laion_fmri projects voxel values onto the surface (through each
-subject's FreeSurfer recon), nilearn draws the flatmaps."""
+"""Cortical flatmaps on fsaverage, drawn with nilearn (Abraham et al., 2014). The datasets put their
+values on fsaverage (course.to_fsaverage / laion.to_fsaverage); the mesh resolution follows the data."""
 
 import warnings
 
-import laion_fmri as lf
 import matplotlib.pyplot as plt
 import numpy as np
-from laion_fmri.download import download
 from nilearn import datasets, plotting
 
 from . import config
 
-DENSITY = "fsaverage5"
 HEMIS = {"L": "left", "R": "right"}
+DENSITIES = {10242: "fsaverage5", 40962: "fsaverage6", 163842: "fsaverage"}   # vertices per hemisphere
 OUTLINE_COLOURS = ["black", "dimgray", "darkgray"]   # one per region, in config.ROI_NAMES order
-MIN_COVER = 0.1   # see to_fsaverage
-
-
-def _ensure_freesurfer(sub, subject):
-    # the projection needs the subject's white surfaces and sphere.reg from its FreeSurfer recon
-    needed = [f"surf/{h}h.{x}" for h in "lr" for x in ("white", "sphere.reg")]
-    if not (sub.has_freesurfer() and all((sub.get_freesurfer_dir() / f).exists() for f in needed)):
-        download(subject, ses="01", desc="SingletrialBetas", suffix="trials", include_freesurfer=True)
-
-
-def to_fsaverage(values, subject, voxels):
-    """Per-voxel values -> fsaverage5. values: {name: [n_voxels]} (columns of data.SubjectData).
-
-    One projection per subject for all maps (it takes ~10 s whatever their number). Each vertex gets
-    the coverage-weighted average of the analysed voxels around it; vertices with < MIN_COVER of
-    their weight on analysed voxels are NaN. Returns {name: {"L", "R": [n_vertices]}}.
-    """
-    sub = lf.load_subject(subject)
-    _ensure_freesurfer(sub, subject)
-    full = np.zeros((len(values) + 1, sub.get_n_voxels()))
-    full[:-1, voxels] = np.stack(list(values.values()))
-    full[-1, voxels] = 1.0                                   # last row: coverage
-    surf = sub.volume_to_surface(full, target="fsaverage", fsaverage_density=DENSITY)
-    out = {name: {} for name in values}
-    for h in HEMIS:
-        weight = surf[h][-1]
-        ok = weight > MIN_COVER
-        for k, name in enumerate(values):
-            out[name][h] = np.where(ok, surf[h][k] / np.where(ok, weight, 1.0), np.nan)
-    return out
 
 
 def group_average(maps, min_subjects=None):
@@ -73,8 +41,9 @@ def roi_outlines(projected):
 
 def _flatmaps(rows, outlines, vmax, label, title, cmap="RdBu_r"):
     # rows: {row title: {"L", "R": values}} -> one row of (left, right) flatmaps each
-    mesh = datasets.load_fsaverage(DENSITY)["flat"]
-    sulc = datasets.load_fsaverage_data(mesh=DENSITY, mesh_type="flat", data_type="sulcal")
+    density = DENSITIES[len(next(iter(rows.values()))["L"])]
+    mesh = datasets.load_fsaverage(density)["flat"]
+    sulc = datasets.load_fsaverage_data(mesh=density, mesh_type="flat", data_type="sulcal")
     fig, axes = plt.subplots(len(rows), 2, figsize=(9, 4 * len(rows)), squeeze=False,
                              subplot_kw={"projection": "3d"})
     for (row_title, values), row_axes in zip(rows.items(), axes):

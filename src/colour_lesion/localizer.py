@@ -1,17 +1,20 @@
-"""COCO colour localizer: the same images in colour and in greyscale (Lin et al., 2014)."""
+"""Colour localizer: Imagenette images (10 ImageNet classes; Howard, 2019), the same images in colour
+and in greyscale. ImageNet is what AlexNet was trained on (Deng et al., 2009)."""
 
+import sys
 from pathlib import Path
 
 import numpy as np
 import torch
 from PIL import Image
 from torchvision import transforms
+from torchvision.datasets import Imagenette
 
 from . import config
 
 
 def is_greyscale(img, tol=2.0):
-    """True if an image has (almost) no colour. Some COCO images are black and white."""
+    """True if an image has (almost) no colour. A few ImageNet images are black and white."""
     if img.mode in ("L", "LA", "1", "I", "F"):
         return True
     arr = np.asarray(img.convert("RGB")).astype(np.int16)
@@ -19,28 +22,31 @@ def is_greyscale(img, tol=2.0):
     return spread.mean() < tol
 
 
-def load_coco_localizer(coco_dir, n=config.N_LOCALIZER, seed=config.LOCALIZER_SEED):
-    """Pick n random colour images from a folder of COCO jpgs (val2017 or unlabeled2017).
-
-    Returns the COCO ids and a uint8 array (n, 224, 224, 3).
-    LAION-fMRI's NSD images (NSD special1000) are not in COCO val2017, and unlabeled2017 has no NSD images.
-    """
-    files = sorted(Path(coco_dir).glob("*.jpg"))
-    assert files, f"no COCO images found in {coco_dir}"
-
+def sample_colour_images(files, n=config.N_LOCALIZER, seed=config.LOCALIZER_SEED):
+    """n random colour images from a list of image files (fixed seed).
+    Returns their names (file stems) and a uint8 array (n, 224, 224, 3)."""
+    files = sorted(files)
     rng = np.random.default_rng(seed)
     ids, imgs = [], []
     for i in rng.permutation(len(files)):
         img = Image.open(files[i])
         if is_greyscale(img):
             continue
-        ids.append(int(files[i].stem))
+        ids.append(files[i].stem)
         imgs.append(np.array(img.convert("RGB").resize((config.IMG_SIZE, config.IMG_SIZE))))
         if len(ids) == n:
             break
-
-    assert len(ids) == n, f"only {len(ids)} usable COCO images, wanted {n}"
+    assert len(ids) == n, f"only {len(ids)} usable colour images, wanted {n}"
     return ids, np.stack(imgs)
+
+
+def load_localizer(root=None, n=config.N_LOCALIZER, seed=config.LOCALIZER_SEED):
+    """n colour images from the Imagenette training set (torchvision downloads it once, ~340 MB)."""
+    colab = "google.colab" in sys.modules
+    root = Path(root or (config.COLAB_LOCALIZER_DIR if colab else config.LOCAL_LOCALIZER_DIR))
+    root.mkdir(parents=True, exist_ok=True)
+    Imagenette(root, split="train", size="320px", download=True)   # skips the download if present
+    return sample_colour_images(list((root / "imagenette2-320" / "train").glob("*/*.JPEG")), n, seed)
 
 
 # convert to grayscale (function from Ale!)

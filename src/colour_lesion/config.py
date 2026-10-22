@@ -1,30 +1,17 @@
-"""Experiment settings. Change things here, not inside the analysis code."""
+"""Experiment settings. Change things here, not inside the analysis code.
+Dataset-specific settings (folders, subjects, region masks) live in course.py and laion.py."""
 
 from pathlib import Path
 
-# --- where things live (see data.init) ---
-LOCAL_DATA_DIR = Path("/media/chuddy/Extreme SSD/data")                        # LAION-fMRI downloads
-LOCAL_WORK_DIR = Path("/media/chuddy/Extreme SSD/data/neuro-ai-intensive")      # cache/ + coco/
-COLAB_DATA_DIR = Path("/content/laion-fmri")                                    # big, temporary
-COLAB_WORK_DIR = Path("/content/drive/MyDrive/SHARE/NeuroAI Project/data")      # small, persistent
+# our regions (each dataset maps them to its own masks)
+ROI_NAMES = ["EVC", "hV4", "LOC"]
+ENCODING_SUBJECTS = None   # None = all subjects; encoding models are slow, e.g. ["subj01"] for a quick test
 
-# --- brain data: LAION-fMRI (5 subjects, 7T, single-trial GLMsingle betas) ---
-SUBJECTS = ["sub-01", "sub-03", "sub-05", "sub-06", "sub-07"]
-ENCODING_SUBJECTS = SUBJECTS   # encoding models are slow; set e.g. ["sub-01"] for a quick test
-
-# our regions -> LAION-fMRI ROI names
-ROIS = {
-    "EVC": "EVC",        # V1-V3 (retinotopy)
-    "hV4": "hV4",        # retinotopy
-    "LOC": "lobjects",   # lateral object-selective cortex (localizer)
-}
-ROI_NAMES = list(ROIS)
-# voxels we keep: stimulus-responsive visual cortex plus our regions
-VISUAL_ROIS = ["laiongeneral", *ROIS.values()]
-
-# --- colour localizer (COCO images) ---
+# --- colour localizer: Imagenette (10 ImageNet classes; torchvision downloads it, ~340 MB) ---
+LOCAL_LOCALIZER_DIR = Path.home() / ".cache/neuro-ai-intensive/imagenette"   # internal disk: small files waste space on exFAT
+COLAB_LOCALIZER_DIR = Path("/content/imagenette")   # temporary, downloaded again per session
 N_LOCALIZER = 1000      # number of colour localizer images
-LOCALIZER_SEED = 42     # fixed seed -> the same COCO images every run
+LOCALIZER_SEED = 42     # fixed seed -> the same images every run
 IMG_SIZE = 224          # AlexNet input size
 
 # --- lesion ---
@@ -37,8 +24,9 @@ RANDOM_SEED = 0
 LAYERS = ["features.2", "features.5", "features.7", "features.9", "features.12",
           "classifier.2", "classifier.5"]
 
-# --- cross-validation: LAION-fMRI's predefined 5-fold split of the shared images ---
-SPLITS = [f"random_{k}" for k in range(5)]
+# --- cross-validation over images: 5 folds ---
+N_FOLDS = 5
+CV_SEED = 0
 
 # --- encoding models (himalaya kernel ridge) ---
 RIDGE_ALPHAS = [10.0 ** k for k in range(-3, 7)]   # ridge penalties to try: 0.001 ... 1e6

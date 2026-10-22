@@ -18,7 +18,7 @@ from . import config
 
 
 def brain_rdms(brain, roi_names=config.ROI_NAMES):
-    """Correlation-distance RDM per subject and region. brain: {subject: data.SubjectData}
+    """Correlation-distance RDM per subject and region. brain: {subject: brain.SubjectData}
     -> [n_subjs, n_regions, RDM_len]"""
     return np.array([[pdist(d.betas[:, d.rois[r]], metric="correlation") for r in roi_names]
                      for d in brain.values()])

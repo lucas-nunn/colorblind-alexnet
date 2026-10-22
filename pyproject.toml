@@ -1,20 +1,24 @@
 [project]
 name = "colour-lesion"
 version = "0.1.0"
-description = "Colour-lesioned AlexNet vs. healthy fMRI (LAION-fMRI) - Neuro-AI intensive, WiSe26/27"
+description = "Colour-lesioned AlexNet vs. healthy fMRI (NSD course data; LAION-fMRI locally) - Neuro-AI intensive, WiSe26/27"
 readme = "README.md"
 requires-python = ">=3.10"
 # torch/torchvision are preinstalled on Colab; loose bounds so pip keeps those builds
 dependencies = [
     "himalaya>=0.4.11",
-    "laion-fmri[template] @ git+https://github.com/ViCCo-Group/LAION-fMRI.git@main",
     "matplotlib>=3.7",
+    "nilearn>=0.11",
     "numpy>=1.26",
     "pillow>=10",
     "scipy>=1.11",
     "torch>=2.2",
     "torchvision>=0.17",
 ]
+
+[project.optional-dependencies]
+# LAION-fMRI, local only (laion.py):  pip install ".[laion]"  /  uv sync --extra laion
+laion = ["laion-fmri[template] @ git+https://github.com/ViCCo-Group/LAION-fMRI.git@main"]
 
 [dependency-groups]
 dev = [
@@ -28,7 +32,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
-allow-direct-references = true   # laion-fmri is installed from GitHub (works with pip and uv)
+allow-direct-references = true   # the laion extra is installed from GitHub (works with pip and uv)
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/colour_lesion"]
