@@ -25,8 +25,7 @@ The notebook finds the data root like this:
 ## Run on Colab
 
 1. Put `notebooks/lesion_model.ipynb` in the Drive folder that holds the data, and open it in Colab.
-2. Once only: add a GitHub token with read access to this repo as a Colab secret named `GH_TOKEN` (key icon in the left sidebar).
-3. Run all. The first cell installs this package from GitHub.
+2. Use a GPU runtime and run all. The first cell installs this package from GitHub.
 
 ## Run locally
 

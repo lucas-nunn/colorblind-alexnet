@@ -35,18 +35,16 @@
 
 # %% [markdown]
 # ## 0. Setup
-# On Colab: use a GPU runtime and add the secret `GH_TOKEN` (see README). Locally: `uv sync`.
+# On Colab: use a GPU runtime. Locally: `uv sync`.
 
 # %%
 import subprocess
 import sys
 
-REPO = "github.com/lucas-nunn/neuro-ai-intensive.git"
+REPO = "https://github.com/lucas-nunn/colorblind-alexnet.git"
 
 if "google.colab" in sys.modules:
-    from google.colab import userdata
-    token = userdata.get("GH_TOKEN")
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", f"git+https://{token}@{REPO}"], check=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", f"git+{REPO}"], check=True)
 
 # %% [markdown]
 # Leave `DATA_ROOT` empty to find the data automatically (Colab: the Drive folder with `stimuli/` and `fmri_data/`; locally: the external SSD). `QUICK` fits the encoding models for subject 1 only.
