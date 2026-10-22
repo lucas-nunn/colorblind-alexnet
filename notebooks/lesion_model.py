@@ -29,7 +29,7 @@
 # 2. Lesion: colour channels and random controls
 # 3. Brain data
 # 4. Model representations
-# 5. RSA: reweighted fit and variance partitioning
+# 5. RSA: linear regression and variance partitioning
 # 6. Encoding models: banded ridge regression
 # 7. Cortical maps
 
@@ -100,7 +100,7 @@ for rep, channels in enumerate(random_channel_sets):
 
 # %% [markdown]
 # ## 3. Brain data
-# Responses of each subject's visual cortex to the images all subjects saw, and 5 image folds for cross-validation.
+# Responses of each subject's visual cortex to the images all subjects saw, and 5 image folds (used by the encoding models).
 #
 # * **course**: Algonauts 2023 version of NSD (Allen et al., 2022; Gifford et al., 2023), 8 subjects, 872 images, ~40k surface vertices per subject; 5 random folds.
 # * **laion** (local only): LAION-fMRI, 5 subjects, 7T, single-trial GLMsingle betas (Prince et al., 2022) via the `laion_fmri` package; 1,121 images; the dataset's predefined 5-fold split. Per session each voxel is z-scored and the repetitions of each image are averaged; the first run builds a small cache per subject.
@@ -146,26 +146,26 @@ plt.show()
 
 # %% [markdown]
 # ## 5. RSA
-# ### 5a. Reweighted RSA
-# Each model predicts a brain RDM as a non-negative weighted sum of its layer RDMs (Khaligh-Razavi & Kriegeskorte, 2014). Weights are cross-validated over subjects (leave one out) × images (the 5 folds); score = Pearson r on held-out subject and images (Storrs et al., 2021).
+# ### 5a. Model fit
+# Per subject and region: linear regression of the brain RDM on the model's 7 layer RDMs (+ intercept), i.e. the model's layers reweighted to fit the region (Khaligh-Razavi & Kriegeskorte, 2014). Score = R².
 
 # %%
-healthy_scores, healthy_weights = rsa.reweighted_fit(healthy_rdms, brain_rdms, folds)
-lesioned_scores, lesioned_weights = rsa.reweighted_fit(lesioned_rdms, brain_rdms, folds)
-random_scores = np.mean([rsa.reweighted_fit(r, brain_rdms, folds)[0] for r in random_rdms], axis=0)
+healthy_scores, healthy_weights = rsa.fit(healthy_rdms, brain_rdms)
+lesioned_scores, lesioned_weights = rsa.fit(lesioned_rdms, brain_rdms)
+random_scores = np.mean([rsa.fit(r, brain_rdms)[0] for r in random_rdms], axis=0)
 
 plots.score_bars({"healthy": healthy_scores, "colour lesion": lesioned_scores,
                   f"random lesion (mean of {len(random_rdms)})": random_scores},
-                 title="RSA: AlexNet–fMRI fit (mean ± SEM across subjects)")
+                 title="RSA: AlexNet–fMRI fit, R² (mean ± SEM across subjects)")
 plt.show()
 
 # %% [markdown]
 # ### 5b. Variance partitioning
-# Fit healthy, lesioned and both together (same cross-validation; r² = squared held-out r) and split the variance (Groen et al., 2018; Hebart et al., 2018): **unique healthy** = r²(both) − r²(lesioned), i.e. what the lesion removes; **shared** = r²(healthy) + r²(lesioned) − r²(both); **unique lesioned** = r²(both) − r²(healthy).
+# Per subject and region, regress the brain RDM on the healthy layers, the lesioned layers, and both together, and split the variance (commonality analysis; Groen et al., 2018): **unique healthy** = R²(both) − R²(lesioned), i.e. what the lesion removes; **shared** = R²(healthy) + R²(lesioned) − R²(both); **unique lesioned** = R²(both) − R²(healthy).
 
 # %%
-colour_partition = rsa.variance_partition(healthy_rdms, lesioned_rdms, brain_rdms, folds)
-random_partitions = [rsa.variance_partition(healthy_rdms, r, brain_rdms, folds) for r in random_rdms]
+colour_partition = rsa.variance_partition(healthy_rdms, lesioned_rdms, brain_rdms)
+random_partitions = [rsa.variance_partition(healthy_rdms, r, brain_rdms) for r in random_rdms]
 random_partition = {part: np.mean([p[part] for p in random_partitions], axis=0) for part in colour_partition}
 
 rsa_partition = {"colour": colour_partition, "random": random_partition}
@@ -175,7 +175,7 @@ plots.partition_table(rsa_partition)
 
 # %% [markdown]
 # ## 6. Encoding models
-# Ridge regression per vertex/voxel (all visual units of a subject) on all 7 AlexNet layers, equally weighted, one feature space per model; fitted on kernels with himalaya (Dupré la Tour et al., 2022). Same 5 image folds as the RSA; penalties chosen on training images only.
+# Ridge regression per vertex/voxel (all visual units of a subject) on all 7 AlexNet layers, equally weighted, one feature space per model; fitted on kernels with himalaya (Dupré la Tour et al., 2022). Cross-validated over the 5 image folds; penalties chosen on training images only.
 #
 # For each lesion, a **banded ridge** joint model (Nunez-Elizalde et al., 2019) of healthy + lesioned features; `r2_score_split` divides its held-out R² into a **healthy** and a **lesioned** part. More healthy credit after the colour lesion than after random lesions = colour matters. Credit between near-identical feature spaces is partly arbitrary, so compare colour with random, not with 0.
 
@@ -260,4 +260,3 @@ plt.show()
 # - LAION-fMRI dataset and `laion_fmri` package, ViCCo-Group. https://laion-fmri.hebartlab.com
 # - Nunez-Elizalde, A. O., Huth, A. G., & Gallant, J. L. (2019). Voxelwise encoding models with non-spherical multivariate normal priors. *NeuroImage, 197*, 482–492. https://doi.org/10.1016/j.neuroimage.2019.04.012
 # - Prince, J. S., Charest, I., Kurzawski, J. W., Pyles, J. A., Tarr, M. J., & Kay, K. N. (2022). Improving the accuracy of single-trial fMRI response estimates using GLMsingle. *eLife, 11*, e77599. https://doi.org/10.7554/eLife.77599
-# - Storrs, K. R., Kietzmann, T. C., Walther, A., Mehrer, J., & Kriegeskorte, N. (2021). Diverse deep neural networks all predict human inferior temporal cortex well, after training and fitting. *Journal of Cognitive Neuroscience, 33*(10), 2044–2064. https://doi.org/10.1162/jocn_a_01755

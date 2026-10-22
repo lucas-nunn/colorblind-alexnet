@@ -49,7 +49,7 @@ def _grouped_bars(scores, roi_names, ylabel, title):
     return fig
 
 
-def score_bars(scores, roi_names=config.ROI_NAMES, title="", ylabel="Cross-validated Pearson r\n(reweighted RSA)"):
+def score_bars(scores, roi_names=config.ROI_NAMES, title="", ylabel="R²\n(linear regression on layer RDMs)"):
     """scores: {model name: [n_subjs, n_regions]}"""
     return _grouped_bars(scores, roi_names, ylabel, title)
 
@@ -61,7 +61,7 @@ PART_COLOURS = {"shared": "#2a78d6", "unique healthy": "#eb6834", "unique lesion
 HEALTHY_PARTS = {"unique healthy", "healthy features"}   # the part that gets the error bar
 
 
-def partition_bars(partitions, roi_names=config.ROI_NAMES, title="", ylabel="Variance explained\n(cross-validated r²)"):
+def partition_bars(partitions, roi_names=config.ROI_NAMES, title="", ylabel="Variance explained (R²)"):
     """Stacked bars of variance parts, one bar per lesion within each region.
 
     partitions: {lesion name: {part name: [n_subjs, n_regions]}}
