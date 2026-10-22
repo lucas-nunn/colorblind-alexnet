@@ -4,23 +4,20 @@ Lucas Nunn, Max Zimmermann, S. Charlotte Masak. Seminar *Artificial Neural Netwo
 
 We silence AlexNet's most colour-selective conv1 channels and test where the fit of its layer RDMs to healthy fMRI data drops (EVC, hV4, LOC). The analysis lives in [notebooks/lesion_model.ipynb](notebooks/lesion_model.ipynb); the code is in the `colour_lesion` package.
 
-## Data folder
+## Data
 
-The same layout on Drive and on the SSD:
+The Algonauts 2023 data (NSD, 8 subjects) and COCO images, in the same layout on Drive and on the SSD:
 
 ```
-<data root>/
-  stimuli/              872 NSD images         (course folder UvA_encodingtutorial)
-  fmri_data/subj01..08/ fMRI + roi_masks       (course folder UvA_encodingtutorial)
-  coco/unlabeled2017/   COCO unlabeled2017     (colour localizer; unzip unlabeled2017.zip here)
+Drive  MyDrive/SHARE/NeuroAI Project/data/
+           algonauts_2023_tutorial_data/subj01..08/   (shortcut)
+           COCO/val2017/
+SSD    /media/chuddy/Extreme SSD/data/
+           algonauts/train/subj01..08/
+           neuro-ai-intensive/coco/unlabeled2017/ (or val2017/)
 ```
 
-The notebook finds the data root like this:
-
-1. `DATA_ROOT` in the notebook's setup cell, if you fill it in
-2. the environment variable `NAI_DATA_ROOT`
-3. on Colab: the one Drive folder that contains `stimuli/` and `fmri_data/`. A folder someone shared with you must be added to "My Drive" as a shortcut first.
-4. locally: `/media/chuddy/Extreme SSD/data/neuro-ai-intensive`
+The stimuli are the 872 training images that all 8 subjects saw; they are found from the image file names (`train-0001_nsd-00013.png`). Set `DATA_ROOT` in the notebook (or `NAI_DATA_ROOT`) to use another data folder; `NAI_COCO` overrides the COCO folder. If the data sits in a folder someone shared with you, add it to "My Drive" as a shortcut and set `DATA_ROOT`.
 
 ## Run on Colab
 

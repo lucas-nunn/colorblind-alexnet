@@ -1,9 +1,9 @@
-"""Brain RDMs from the Algonauts version of NSD (course dataset)."""
+"""fMRI responses and brain RDMs from the Algonauts 2023 version of NSD."""
 
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from . import config
+from . import config, stimuli
 
 # which Algonauts mask file each ROI lives in
 ROI_CLASSES = {
@@ -36,13 +36,15 @@ def get_roi_mask(roi, hemisphere, subj_dir, space="challenge"):
 
 
 def visual_fmri(data, subj, roi_parts=config.ROI_PARTS):
-    """All visual-cortex vertices of one subject, both hemispheres (left, then right).
+    """All visual-cortex vertices of one subject, both hemispheres (left, then right), for the
+    shared stimuli in stimuli.list_stimuli order.
 
     Returns the responses [n_stim, n_vertices] and {region: boolean mask over those vertices}.
     """
     subj_dir = data.subject_dir(subj)
-    fmri = np.concatenate([np.load(subj_dir / "lh_training_fmri.npy"),
-                           np.load(subj_dir / "rh_training_fmri.npy")], axis=1)
+    rows = stimuli.shared_stimuli(data)[1][subj]
+    fmri = np.concatenate([np.load(data.training_fmri(subj, hemi), mmap_mode="r")[rows]
+                           for hemi in ["left", "right"]], axis=1)
     roi_masks = {}
     for roi_name, parts in roi_parts.items():
         # a vertex belongs to the region if it belongs to any of its parts

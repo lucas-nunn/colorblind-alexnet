@@ -47,7 +47,7 @@ if "google.colab" in sys.modules:
     subprocess.run([sys.executable, "-m", "pip", "install", f"git+{REPO}"], check=True)
 
 # %% [markdown]
-# Leave `DATA_ROOT` empty to find the data automatically (Colab: the Drive folder with `stimuli/` and `fmri_data/`; locally: the external SSD). `QUICK` fits the encoding models for subject 1 only.
+# Leave `DATA_ROOT` empty to use the default data folder (Colab: `MyDrive/SHARE/NeuroAI Project/data`; locally: the external SSD); it holds the Algonauts 2023 data and COCO. `QUICK` fits the encoding models for subject 1 only.
 
 # %%
 import matplotlib.pyplot as plt
@@ -65,7 +65,7 @@ print(f"Device: {device} | stimuli: {len(stim_paths)}")
 
 # %% [markdown]
 # ## 1. Colour localizer
-# 1000 colour images from COCO unlabeled2017 (Lin et al., 2014), each shown in colour and in greyscale: same shapes, only colour differs. NSD stimuli come from COCO train/val2017, so there is no overlap with the brain stimuli.
+# 1000 colour images from COCO (Lin et al., 2014), each shown in colour and in greyscale: same shapes, only colour differs. None of our 872 brain stimuli are in COCO val2017 (or unlabeled2017), so there is no overlap.
 
 # %%
 localizer_ids, img_array = stimuli.load_coco_localizer(data)
@@ -93,7 +93,7 @@ for rep, channels in enumerate(random_channel_sets):
 
 # %% [markdown]
 # ## 3. Model representations
-# One pass over the 872 stimuli per model gives each layer's RDM (for RSA) and kernel (for the encoding models). `model.lesion(...)` zeroes the channels only inside the `with` block.
+# One pass over the stimuli per model gives each layer's RDM (for RSA) and kernel (for the encoding models). `model.lesion(...)` zeroes the channels only inside the `with` block.
 
 # %%
 imgs_dataset = stimuli.ImageDataset(stim_paths, transform=alexnet_transforms)
@@ -116,7 +116,7 @@ plt.show()
 
 # %% [markdown]
 # ## 4. Brain data
-# Algonauts NSD responses of 8 subjects to the same 872 images. Regions:
+# Algonauts 2023 (NSD) responses of 8 subjects to the **872 images all of them saw** (training split), in the same order for every subject. Regions:
 #
 # | Region | Algonauts masks |
 # |---|---|

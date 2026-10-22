@@ -1,5 +1,8 @@
 """Images: the NSD stimuli (for the RSA) and the COCO colour localizer."""
 
+import re
+from functools import lru_cache
+
 import numpy as np
 import torch
 from PIL import Image
@@ -10,9 +13,26 @@ from . import config
 
 # ---------------------------------------------------------------- NSD stimuli
 
+@lru_cache
+def shared_stimuli(data, subjects=tuple(config.SUBJECTS)):
+    """The images that every subject saw in the Algonauts training split (872 for all 8 subjects).
+
+    Returns the image paths, sorted by NSD id, and {subject: fMRI row of each of these images}.
+    Training images are numbered in fMRI row order (train-0001_nsd-00013.png = row 0).
+    """
+    files, rows_of = {}, {}
+    for subj in subjects:
+        files[subj] = sorted(data.training_images(subj).glob("*.png"))
+        rows_of[subj] = {int(re.search(r"nsd-(\d+)", f.name).group(1)): row for row, f in enumerate(files[subj])}
+    shared = sorted(set.intersection(*(set(r) for r in rows_of.values())))
+    rows = {subj: np.array([rows_of[subj][n] for n in shared]) for subj in subjects}
+    first = subjects[0]
+    return [files[first][r] for r in rows[first]], rows
+
+
 def list_stimuli(data):
-    """Sorted list of all stimulus files. Index i is also row i of every subject's fMRI data."""
-    return sorted(data.stimuli.iterdir())
+    """The shared stimuli (see shared_stimuli). Index i is also row i of brain.visual_fmri."""
+    return shared_stimuli(data)[0]
 
 
 class ImageDataset(Dataset):

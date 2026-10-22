@@ -1,16 +1,19 @@
-"""Find the data folder, on Colab (Google Drive) or locally (external SSD).
+"""Find the data, on Colab (Google Drive) or locally (external SSD).
 
-The data folder must contain:
+The data root contains the Algonauts 2023 data (NSD) and COCO images:
 
-    stimuli/             the 872 NSD images (course dataset)
-    fmri_data/subjXX/    fMRI responses and roi_masks (course dataset)
-    coco/unlabeled2017/  COCO unlabeled2017 images (colour localizer)
+    Drive  MyDrive/SHARE/NeuroAI Project/data/
+               algonauts_2023_tutorial_data/subj01..08/   (shortcut)
+               COCO/val2017/
+    SSD    /media/chuddy/Extreme SSD/data/
+               algonauts/train/subj01..08/
+               neuro-ai-intensive/coco/unlabeled2017/ or .../val2017/
 
-Where we look, in this order:
-    1. the folder passed to `resolve()`
-    2. the environment variable NAI_DATA_ROOT
-    3. on Colab: a folder in your Drive that contains stimuli/ and fmri_data/
-    4. locally: LOCAL_DEFAULT (the external SSD)
+Each subject folder: roi_masks/, training_split/training_fmri/, training_split/training_images/.
+
+Where we look for the data root, in this order: the folder passed to `resolve()`, the
+environment variable NAI_DATA_ROOT, then the Drive or SSD default. NAI_COCO overrides the
+COCO folder.
 """
 
 import os
@@ -19,8 +22,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ENV_VAR = "NAI_DATA_ROOT"
-LOCAL_DEFAULT = Path("/media/chuddy/Extreme SSD/data/neuro-ai-intensive")
+COCO_ENV_VAR = "NAI_COCO"
 DRIVE = Path("/content/drive")
+COLAB_DEFAULT = DRIVE / "MyDrive" / "SHARE" / "NeuroAI Project" / "data"
+LOCAL_DEFAULT = Path("/media/chuddy/Extreme SSD/data")
+
+# known places of the two datasets inside a data root (first match wins)
+ALGONAUTS_DIRS = ["algonauts_2023_tutorial_data", "algonauts/train", "algonauts_2023_challenge_data"]
+COCO_DIRS = ["COCO/unlabeled2017", "COCO/val2017",
+             "neuro-ai-intensive/coco/unlabeled2017", "neuro-ai-intensive/coco/val2017"]
 
 
 def in_colab():
@@ -29,50 +39,33 @@ def in_colab():
 
 @dataclass(frozen=True)
 class DataPaths:
-    root: Path
-
-    @property
-    def stimuli(self):
-        return self.root / "stimuli"
-
-    @property
-    def fmri(self):
-        return self.root / "fmri_data"
-
-    @property
-    def coco(self):
-        return self.root / "coco" / "unlabeled2017"
+    algonauts: Path   # folder with subj01 ... subj08
+    coco: Path        # folder with COCO jpgs (colour localizer)
 
     def subject_dir(self, subj):
-        return self.fmri / f"subj{subj:02d}"
+        return self.algonauts / f"subj{subj:02d}"
+
+    def training_images(self, subj):
+        return self.subject_dir(subj) / "training_split" / "training_images"
+
+    def training_fmri(self, subj, hemisphere):
+        return self.subject_dir(subj) / "training_split" / "training_fmri" / f"{hemisphere[0]}h_training_fmri.npy"
 
     def missing(self, subjects):
         """List the required files/folders that do not exist (empty list = all good)."""
-        required = [self.stimuli, self.fmri]
+        required = [self.coco]
         for subj in subjects:
-            d = self.subject_dir(subj)
-            required += [d / "lh_training_fmri.npy", d / "rh_training_fmri.npy", d / "roi_masks"]
+            required += [self.training_images(subj), self.training_fmri(subj, "left"),
+                         self.training_fmri(subj, "right"), self.subject_dir(subj) / "roi_masks"]
         return [p for p in required if not p.exists()]
 
 
-def _looks_like_data_root(p):
-    return (p / "stimuli").is_dir() and (p / "fmri_data").is_dir()
-
-
-def _search_drive():
-    # Folders shared with you show up under .shortcut-targets-by-id once you
-    # add a shortcut to them in "My Drive".
-    found = []
-    for base in [DRIVE / "MyDrive", DRIVE / "Shareddrives", DRIVE / ".shortcut-targets-by-id"]:
-        if not base.is_dir():
-            continue
-        for pattern in ["*", "*/*", "*/*/*"]:
-            found += [p for p in base.glob(pattern) if _looks_like_data_root(p)]
-    return sorted(set(found))
+def _first_existing(root, candidates):
+    return next((root / c for c in candidates if (root / c).is_dir()), root / candidates[0])
 
 
 def resolve(root=None, subjects=None):
-    """Return the DataPaths for this machine, and check that the course data is there."""
+    """Return the DataPaths for this machine, and check that all data is there."""
     from . import config
 
     subjects = config.SUBJECTS if subjects is None else subjects
@@ -81,26 +74,16 @@ def resolve(root=None, subjects=None):
         from google.colab import drive
         drive.mount(str(DRIVE))
 
-    if root is None:
-        root = os.environ.get(ENV_VAR)
+    root = Path(root or os.environ.get(ENV_VAR) or (COLAB_DEFAULT if in_colab() else LOCAL_DEFAULT))
+    coco = os.environ.get(COCO_ENV_VAR)
+    data = DataPaths(algonauts=_first_existing(root, ALGONAUTS_DIRS),
+                     coco=Path(coco) if coco else _first_existing(root, COCO_DIRS))
 
-    if root is None and in_colab():
-        candidates = _search_drive()
-        if len(candidates) != 1:
-            raise FileNotFoundError(
-                f"Expected exactly one Drive folder with stimuli/ and fmri_data/, found {len(candidates)}: "
-                f"{[str(c) for c in candidates]}. Pass the folder explicitly: paths.resolve('/content/drive/...')"
-            )
-        root = candidates[0]
-
-    if root is None:
-        root = LOCAL_DEFAULT
-
-    data = DataPaths(Path(root))
     missing = data.missing(subjects)
     if missing:
         listing = "\n  ".join(str(p) for p in missing[:10])
-        raise FileNotFoundError(f"Data folder {data.root} is incomplete. Missing:\n  {listing}")
+        raise FileNotFoundError(f"Data under {root} is incomplete (set DATA_ROOT to the folder with the "
+                                f"Algonauts and COCO data). Missing:\n  {listing}")
 
-    print(f"Data folder: {data.root}")
+    print(f"Algonauts: {data.algonauts}\nCOCO:      {data.coco}")
     return data
