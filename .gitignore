@@ -6,6 +6,9 @@ __pycache__/
 # data never goes in git: it lives on Drive / the external SSD
 data/
 *.npy
+*.npz
+*.h5
+*.nii.gz
 *.jpg
 *.png
 
@@ -14,3 +17,4 @@ tests/
 wiki/
 validate_local.py
 runs/
+logs/

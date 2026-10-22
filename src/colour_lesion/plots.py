@@ -16,17 +16,6 @@ def colour_vs_grey(colour_img, grey_img, title=""):
     return fig
 
 
-def dataset_samples(dataset, n_imgs=5, mean=config.IMAGENET_MEAN, std=config.IMAGENET_STD):
-    """Show the first n images exactly as the model sees them (after the transforms)."""
-    fig, axes = plt.subplots(1, n_imgs, figsize=(n_imgs * 1.5, 1.5))
-    for i, ax in enumerate(np.atleast_1d(axes)):
-        img = dataset[i].permute(1, 2, 0).numpy() * std + mean
-        ax.imshow(np.clip(img, 0, 1))
-        ax.set_xticks([])
-        ax.set_yticks([])
-    return fig
-
-
 def rdm(rdm_vec, title=None, colormap="viridis"):
     fig, ax = plt.subplots()
     im = ax.imshow(squareform(rdm_vec), cmap=colormap)

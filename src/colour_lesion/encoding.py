@@ -75,7 +75,7 @@ def cv_r2(kernels, Y, folds):
     kernels: list of feature spaces; each is a [n_stim, n_stim] kernel or a list of kernels
              (1 feature space = ridge regression, 2+ = banded ridge regression)
     Y:       responses [n_stim, n_vertices]
-    folds:   fold number of every stimulus (rsa.stimulus_folds, the same folds as the RSA)
+    folds:   fold number of every stimulus (data.shared_images: LAION-fMRI's 5-fold split)
     Hyperparameters (ridge penalty, band weights) are chosen by inner cross-validation
     on the training images only.
     """

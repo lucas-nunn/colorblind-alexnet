@@ -12,13 +12,16 @@ brain variance that the healthy and a lesioned model explain into unique and sha
 import numpy as np
 from scipy.linalg import cholesky, solve_triangular
 from scipy.optimize import nnls
+from scipy.spatial.distance import pdist
 
 from . import config
 
 
-def stimulus_folds(n_stim, n_folds=config.CV_FOLDS, seed=config.CV_SEED):
-    """Assign every stimulus to one of n_folds folds (fixed seed -> the same folds for every model)."""
-    return np.random.default_rng(seed).permutation(n_stim) % n_folds
+def brain_rdms(brain, roi_names=config.ROI_NAMES):
+    """Correlation-distance RDM per subject and region. brain: {subject: data.SubjectData}
+    -> [n_subjs, n_regions, RDM_len]"""
+    return np.array([[pdist(d.betas[:, d.rois[r]], metric="correlation") for r in roi_names]
+                     for d in brain.values()])
 
 
 def pair_masks(test_stim):
@@ -54,11 +57,10 @@ def fit_weights(layer_rdms, target):
     return _nnls_gram(X @ X.T, X @ (target - target.mean()))
 
 
-def _cv_fold_r(layers, brain, n_folds, seed):
+def _cv_fold_r(layers, brain, folds):
     # held-out Pearson r per subject, fold and region (see reweighted_fit)
-    n_subjs, n_regions, rdm_len = brain.shape
-    n_stim = int(round((1 + np.sqrt(1 + 8 * rdm_len)) / 2))   # RDM_len = n_stim * (n_stim - 1) / 2
-    folds = stimulus_folds(n_stim, n_folds, seed)
+    n_subjs, n_regions, _ = brain.shape
+    n_folds = len(np.unique(folds))
     brain_sum = brain.sum(axis=0)
 
     r = np.zeros((n_subjs, n_folds, n_regions))
@@ -84,7 +86,7 @@ def _stack(rdms_by_layer):
     return np.stack(list(rdms_by_layer.values()))   # [n_layers, RDM_len]
 
 
-def reweighted_fit(rdms_by_layer, brain, n_folds=config.CV_FOLDS, seed=config.CV_SEED):
+def reweighted_fit(rdms_by_layer, brain, folds):
     """Cross-validated reweighted RSA: one score per subject and region.
 
     For each held-out subject and each stimulus fold:
@@ -94,14 +96,14 @@ def reweighted_fit(rdms_by_layer, brain, n_folds=config.CV_FOLDS, seed=config.CV
          (0 if all weights are 0, i.e. no layer predicts the brain RDM)
     The score is averaged over folds.
 
-    brain: [n_subjs, n_regions, RDM_len]
+    brain: [n_subjs, n_regions, RDM_len]; folds: fold number of every stimulus
     returns scores [n_subjs, n_regions] and weights [n_subjs, n_folds, n_regions, n_layers]
     """
-    r, weights = _cv_fold_r(_stack(rdms_by_layer), brain, n_folds, seed)
+    r, weights = _cv_fold_r(_stack(rdms_by_layer), brain, folds)
     return r.mean(axis=1), weights
 
 
-def variance_partition(healthy_rdms, lesioned_rdms, brain, n_folds=config.CV_FOLDS, seed=config.CV_SEED):
+def variance_partition(healthy_rdms, lesioned_rdms, brain, folds):
     """Split the brain variance explained by the healthy and a lesioned model into three parts.
 
     Three reweighted models are cross-validated exactly like reweighted_fit (same folds):
@@ -118,7 +120,7 @@ def variance_partition(healthy_rdms, lesioned_rdms, brain, n_folds=config.CV_FOL
     h, l = _stack(healthy_rdms), _stack(lesioned_rdms)
     r2 = {}
     for name, layers in [("healthy", h), ("lesioned", l), ("both", np.concatenate([h, l]))]:
-        r, _ = _cv_fold_r(layers, brain, n_folds, seed)
+        r, _ = _cv_fold_r(layers, brain, folds)
         r2[name] = np.clip(r, 0, None) ** 2
 
     parts = {
