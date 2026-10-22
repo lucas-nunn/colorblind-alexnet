@@ -23,7 +23,7 @@ SUBJECTS = ["sub-01", "sub-03", "sub-05", "sub-06", "sub-07"]
 ROIS = {"EVC": "EVC", "hV4": "hV4", "LOC": "lobjects"}   # our regions -> LAION-fMRI ROI names
 VISUAL_ROIS = ["laiongeneral", *ROIS.values()]          # voxels we keep
 SPLITS = [f"random_{k}" for k in range(5)]
-DENSITY = "fsaverage5"
+DENSITY = "fsaverage"   # full resolution, as pycortex's fsaverage
 MIN_COVER = 0.1   # see to_fsaverage
 
 
@@ -154,7 +154,7 @@ def _ensure_freesurfer(sub, subject):
 
 
 def to_fsaverage(values, subject, data, dirs):
-    """Per-voxel values {name: [n_voxels]} -> {name: {"L", "R": fsaverage5 values}}.
+    """Per-voxel values {name: [n_voxels]} -> {name: {"L", "R": fsaverage values}}.
 
     One laion_fmri projection per subject for all maps (~10 s whatever their number). Each vertex
     gets the coverage-weighted average of the analysed voxels around it; vertices with < MIN_COVER

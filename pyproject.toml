@@ -8,9 +8,9 @@ requires-python = ">=3.10"
 dependencies = [
     "himalaya>=0.4.11",
     "matplotlib>=3.7",
-    "nilearn>=0.11",
     "numpy>=1.26",
     "pillow>=10",
+    "pycortex>=1.4",
     "scipy>=1.11",
     "torch>=2.2",
     "torchvision>=0.17",
